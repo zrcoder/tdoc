@@ -70,7 +70,7 @@ func (m *Menu) renderedContent() string {
 	buf := strings.Builder{}
 	buf.WriteString("\n")
 	for i, v := range m.docs {
-		title := v.Name
+		title := v.Title
 		renderedWidth := lipgloss.Width(title) + prefixLen
 		exraLen := prefixLen + len(dotsSuffix)
 		if renderedWidth > m.altViewport.Width && m.altViewport.Width > exraLen {
