@@ -7,20 +7,19 @@ import (
 	"log"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/zrcoder/tdoc"
+	"github.com/zrcoder/tdoc/docmgr"
+	"github.com/zrcoder/tdoc/view"
 )
 
 var (
 	//go:embed help.md
-	helpInfo string
-
+	helpInfo         string
 	renderedHelpInfo string
 	rootCmd          = &cobra.Command{}
 	sortBy           string
-	errStyle         lipgloss.Style
 )
 
 func main() {
@@ -28,11 +27,10 @@ func main() {
 	renderedHelpInfo = renderedMarkdown(helpInfo)
 	rootCmd.SetHelpTemplate(renderedHelpInfo)
 	rootCmd.PersistentFlags().StringVarP(&sortBy, "sort", "s", "", "sort the docs by title/time, if not set, will keep the original order")
-	errStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#f00"))
 
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Println(errStyle.Render(err.Error()))
+		fmt.Println(view.ErrStyle.Copy().Render(err.Error()))
 	}
 }
 
@@ -41,7 +39,7 @@ func run(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		dir = args[0]
 	}
-	docs, err := tdoc.ParseFromDir(dir)
+	mgr, err := docmgr.New(dir)
 	if err != nil {
 		printHelpInfo(err)
 		return
@@ -51,12 +49,12 @@ func run(cmd *cobra.Command, args []string) {
 			printHelpInfo(errors.New("only supported sort by time/title"))
 		}
 		if sortBy == "time" {
-			tdoc.Sort(docs, tdoc.ByModTime)
+			mgr.Sort(docmgr.ByModTime)
 		} else {
-			tdoc.Sort(docs, tdoc.ByTitle)
+			mgr.Sort(docmgr.ByTitle)
 		}
 	}
-	err = tdoc.Run(docs)
+	err = tdoc.Run(mgr.Docs())
 	if err != nil {
 		printHelpInfo(err)
 	}
@@ -64,7 +62,7 @@ func run(cmd *cobra.Command, args []string) {
 
 func printHelpInfo(err error) {
 	fmt.Println(renderedHelpInfo)
-	fmt.Println(errStyle.Render(err.Error()))
+	fmt.Println(view.ErrStyle.Copy().Render(err.Error()))
 }
 
 func renderedMarkdown(ori string) string {

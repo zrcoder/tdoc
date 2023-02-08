@@ -3,22 +3,20 @@ package view
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/zrcoder/tdoc/model"
 )
 
 type Menu struct {
-	viewport.Model
-
-	docs    []*model.Doc
+	altViewport
+	docs    []*model.DocInfo
 	current int
 }
 
-func NewMenu(docs []*model.Doc) *Menu {
-	return &Menu{docs: docs}
+func NewMenu(docs []*model.DocInfo) *Menu {
+	return &Menu{docs: docs, current: 0}
 }
 
 func (m *Menu) Init() tea.Cmd {
@@ -26,31 +24,32 @@ func (m *Menu) Init() tea.Cmd {
 }
 
 func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyMsg)
-	if ok {
-		switch keyMsg.String() {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
 		case "ctrl+u":
-			m.Model.HalfViewUp()
+			m.altViewport.HalfViewUp()
 		case "ctrl+d":
-			m.Model.HalfViewDown()
-		case "k":
+			m.altViewport.HalfViewDown()
+		case "k", "up":
 			m.current = (m.current + len(m.docs) - 1) % len(m.docs)
 			return m, m.UpdateDoc()
-		case "j":
+		case "j", "down":
 			m.current = (m.current + 1) % len(m.docs)
 			return m, m.UpdateDoc()
 		}
+	case menuSizeMsg:
+		m.current = 0
+		m.altViewport.Update(msg)
+		return m, m.UpdateDoc()
 	}
 	return m, nil
 }
 
 func (m *Menu) View() string {
-	s, err := m.renderedContent()
-	if err != nil {
-		return err.Error()
-	}
-	m.Model.SetContent(s)
-	return m.Model.View()
+	content := m.renderedContent()
+	m.altViewport.SetContent(content)
+	return m.altViewport.View()
 }
 
 func (m *Menu) UpdateDoc() tea.Cmd {
@@ -59,20 +58,30 @@ func (m *Menu) UpdateDoc() tea.Cmd {
 	}
 }
 
-func (m *Menu) renderedContent() (string, error) {
+func (m *Menu) renderedContent() string {
+	const (
+		selectedPrefix = "> "
+		normalPrefix   = "  "
+		prefixLen      = 2
+		dotsSuffix     = " ..."
+	)
+	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+
 	buf := strings.Builder{}
+	buf.WriteString("\n")
 	for i, v := range m.docs {
-		prefix := "- [ ] ["
-		if i == m.current {
-			prefix = "- [x] ["
+		title := v.Name
+		renderedWidth := lipgloss.Width(title) + prefixLen
+		exraLen := prefixLen + len(dotsSuffix)
+		if renderedWidth > m.altViewport.Width && m.altViewport.Width > exraLen {
+			title = title[:m.altViewport.Width-exraLen] + dotsSuffix
 		}
-		buf.WriteString(prefix)
-		buf.WriteString(v.Title)
-		buf.WriteString("]()\n")
+		if i == m.current {
+			buf.WriteString(selectedStyle.Width(m.altViewport.Width).Render(selectedPrefix + title))
+		} else {
+			buf.WriteString(normalPrefix + title)
+		}
+		buf.WriteString("\n")
 	}
-	render, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(m.Model.Width))
-	if err != nil {
-		return "", err
-	}
-	return render.Render(buf.String())
+	return buf.String()
 }

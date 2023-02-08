@@ -5,7 +5,7 @@ render markdown files in terminal as a book.
 ## Usage
 
 ```shell
-tdoc <directory>
+tdoc [directory]
 ```
 
 > if no args passed, tdoc will use the current directory.

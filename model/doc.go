@@ -2,8 +2,19 @@ package model
 
 import "time"
 
-type Doc struct {
+type Getter func(string) ([]byte, error)
+
+type DocInfo struct {
+	Name    string
 	Title   string
 	ModTime time.Time
-	Content []byte
+	Getter  Getter
+	cached  []byte
+}
+
+func (di *DocInfo) Get() ([]byte, error) {
+	if len(di.cached) == 0 {
+		return di.Getter(di.Name)
+	}
+	return di.cached, nil
 }

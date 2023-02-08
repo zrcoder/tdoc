@@ -1,20 +1,18 @@
 package view
 
 import (
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
+	mr "github.com/charmbracelet/glamour"
 
 	"github.com/zrcoder/tdoc/model"
 )
 
 type Doc struct {
-	viewport.Model
-
-	Doc *model.Doc
+	altViewport
+	Doc *model.DocInfo
 }
 
-func NewDoc(doc *model.Doc) *Doc {
+func NewDoc(doc *model.DocInfo) *Doc {
 	return &Doc{Doc: doc}
 }
 
@@ -27,13 +25,15 @@ func (d *Doc) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 		if key == "u" {
-			d.Model.HalfViewUp()
+			d.altViewport.HalfViewUp()
 		} else if key == "d" {
-			d.Model.HalfViewDown()
+			d.altViewport.HalfViewDown()
 		}
 	case docMsg:
 		d.Doc = msg
-		d.GotoTop()
+		d.altViewport.GotoTop()
+	case docSizeMsg:
+		d.altViewport.Update(msg)
 	}
 	return d, nil
 }
@@ -41,16 +41,20 @@ func (d *Doc) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (d *Doc) View() string {
 	content, err := d.renderedContent()
 	if err != nil {
-		return err.Error()
+		return ErrStyle.Copy().Render(err.Error())
 	}
-	d.Model.SetContent(content)
-	return d.Model.View()
+	d.altViewport.SetContent(string(content))
+	return d.altViewport.View()
 }
 
-func (d *Doc) renderedContent() (string, error) {
-	render, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(d.Model.Width))
+func (d *Doc) renderedContent() ([]byte, error) {
+	content, err := d.Doc.Get()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return render.Render(string(d.Doc.Content))
+	render, err := mr.NewTermRenderer(mr.WithAutoStyle(), mr.WithWordWrap(d.altViewport.Width))
+	if err != nil {
+		return nil, err
+	}
+	return render.RenderBytes(content)
 }

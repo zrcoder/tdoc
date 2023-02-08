@@ -3,22 +3,31 @@ package view
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/zrcoder/tdoc/model"
 )
 
+var (
+	ErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#f00"))
+)
+
 const (
-	MenuWidth = 40
+	MenuWidth = 34
 	SepSpaces = 5
 	Sep       = "  |  \n"
 )
 
-type docMsg *model.Doc
+type (
+	docMsg      *model.DocInfo
+	menuSizeMsg tea.WindowSizeMsg
+	docSizeMsg  tea.WindowSizeMsg
+)
 
-func Run(docs []*model.Doc) error {
+type Getter func(string) ([]byte, error)
+
+func Run(docs []*model.DocInfo) error {
 	m := NewModel(docs)
 	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseAllMotion()).Run()
 	return err
@@ -27,11 +36,10 @@ func Run(docs []*model.Doc) error {
 type Model struct {
 	menue  *Menu
 	doc    *Doc
-	ready  bool
 	height int
 }
 
-func NewModel(docs []*model.Doc) *Model {
+func NewModel(docs []*model.DocInfo) *Model {
 	model := &Model{}
 	model.menue = NewMenu(docs)
 	model.doc = NewDoc(docs[0])
@@ -43,31 +51,36 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.Type == tea.KeyCtrlC {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		if !m.ready {
-			m.menue.Model = viewport.New(MenuWidth, msg.Height)
-			m.doc.Model = viewport.New(msg.Width-MenuWidth-SepSpaces, msg.Height)
-			m.ready = true
-		} else {
-			m.menue.Model.Width = MenuWidth
-			m.menue.Model.Height = msg.Height
-			m.doc.Model.Width = msg.Width - MenuWidth - SepSpaces
-			m.doc.Model.Height = msg.Height
-		}
+		cmds = append(cmds, menuSizeCmd(msg), docSizeCmd(msg))
 		m.height = msg.Height
 	}
 	_, cmd1 := m.menue.Update(msg)
 	_, cmd2 := m.doc.Update(msg)
-	return m, tea.Batch(cmd1, cmd2)
+	cmds = append(cmds, cmd1, cmd2)
+	return m, tea.Batch(cmds...)
 }
 
 func (m *Model) View() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, m.menue.View(), m.sepView(), m.doc.View())
+}
+
+func menuSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
+	return func() tea.Msg {
+		return menuSizeMsg{Width: MenuWidth, Height: msg.Height}
+	}
+}
+
+func docSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
+	return func() tea.Msg {
+		return docSizeMsg{Width: msg.Width - MenuWidth - SepSpaces, Height: msg.Height}
+	}
 }
 
 func (m *Model) sepView() string {
