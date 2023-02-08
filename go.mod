@@ -1,6 +1,6 @@
 module github.com/zrcoder/tdoc
 
-go 1.20
+go 1.18
 
 require (
 	github.com/charmbracelet/bubbles v0.15.0
@@ -34,6 +34,6 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.4.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 )
