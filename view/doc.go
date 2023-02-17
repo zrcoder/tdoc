@@ -1,6 +1,8 @@
 package view
 
 import (
+	"bytes"
+
 	tea "github.com/charmbracelet/bubbletea"
 	mr "github.com/charmbracelet/glamour"
 
@@ -52,6 +54,9 @@ func (d *Doc) renderedContent() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	// workaround for glamar's bug
+	content = bytes.ReplaceAll(content, []byte{'\t'}, []byte("    "))
+
 	render, err := mr.NewTermRenderer(mr.WithAutoStyle(), mr.WithWordWrap(d.altViewport.Width))
 	if err != nil {
 		return nil, err
