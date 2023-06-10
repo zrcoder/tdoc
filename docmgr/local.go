@@ -10,25 +10,17 @@ import (
 	"github.com/zrcoder/tdoc/model"
 )
 
-const (
-	mdExtension = ".md"
-)
-
 type local struct {
 	dir  string
 	docs []*model.DocInfo
 }
 
-func New(dir string) (Manager, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
-	}
-	var getter model.Getter = func(filename string) ([]byte, error) {
+func NewWithDirectory(dir string) (Manager, error) {
+	getter := func(filename string) ([]byte, error) {
 		return os.ReadFile(filepath.Join(dir, filename))
 	}
 	mgr := &local{dir: dir}
-	err = filepath.WalkDir(dir, func(path string, de fs.DirEntry, errin error) error {
+	err := filepath.WalkDir(dir, func(path string, de fs.DirEntry, errin error) error {
 		if errin != nil {
 			return errin
 		}
@@ -63,10 +55,10 @@ func New(dir string) (Manager, error) {
 	return mgr, nil
 }
 
-func (d *local) Docs() []*model.DocInfo {
-	return d.docs
+func (l *local) Docs() []*model.DocInfo {
+	return l.docs
 }
 
-func (d *local) Sort(less Less) {
-	sortDocs(d.docs, less)
+func (l *local) Sort(less Less) {
+	sortDocs(l.docs, less)
 }

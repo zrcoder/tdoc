@@ -24,20 +24,16 @@ func (d *Doc) Init() tea.Cmd {
 
 func (d *Doc) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		key := msg.String()
-		if key == "u" {
-			d.altViewport.HalfViewUp()
-		} else if key == "d" {
-			d.altViewport.HalfViewDown()
-		}
 	case docMsg:
 		d.Doc = msg
 		d.altViewport.GotoTop()
 	case docSizeMsg:
 		d.altViewport.Update(msg)
 	}
-	return d, nil
+	var cmd tea.Cmd
+	d.Model, cmd = d.Model.Update(msg)
+	d.disableUnusedKeys()
+	return d, cmd
 }
 
 func (d *Doc) View() string {
@@ -47,6 +43,13 @@ func (d *Doc) View() string {
 	}
 	d.altViewport.SetContent(string(content))
 	return d.altViewport.View()
+}
+
+func (d *Doc) disableUnusedKeys() {
+	d.altViewport.KeyMap.Down.SetEnabled(false)
+	d.altViewport.KeyMap.Up.SetEnabled(false)
+	d.altViewport.KeyMap.PageDown.SetEnabled(false)
+	d.altViewport.KeyMap.PageUp.SetEnabled(false)
 }
 
 func (d *Doc) renderedContent() ([]byte, error) {

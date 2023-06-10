@@ -1,1 +1,1 @@
-cmd/help.md
+cmd/tdoc/help.md

@@ -13,11 +13,7 @@ type altViewport struct {
 
 func (av *altViewport) Update(msg tea.Msg) {
 	switch msg := msg.(type) {
-	case menuSizeMsg:
-		av.setSize(msg.Width, msg.Height)
 	case docSizeMsg:
-		av.setSize(msg.Width, msg.Height)
-	case tea.WindowSizeMsg:
 		av.setSize(msg.Width, msg.Height)
 	}
 }

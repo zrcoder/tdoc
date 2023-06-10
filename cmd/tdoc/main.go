@@ -39,7 +39,7 @@ func run(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		dir = args[0]
 	}
-	mgr, err := docmgr.New(dir)
+	mgr, err := docmgr.NewWithDirectory(dir)
 	if err != nil {
 		printHelpInfo(err)
 		return

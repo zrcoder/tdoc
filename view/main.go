@@ -3,9 +3,10 @@ package view
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
 	"github.com/zrcoder/tdoc/model"
 )
 
@@ -34,41 +35,58 @@ func Run(docs []*model.DocInfo) error {
 }
 
 type Model struct {
-	menue  *Menu
-	doc    *Doc
-	height int
+	help       help.Model
+	menu       *Menu
+	doc        *Doc
+	mainHeight int
 }
 
 func NewModel(docs []*model.DocInfo) *Model {
 	model := &Model{}
-	model.menue = NewMenu(docs)
+	model.menu = NewMenu(docs)
 	model.doc = NewDoc(docs[0])
+
+	model.help = help.New()
 	return model
 }
 
 func (m *Model) Init() tea.Cmd {
+	m.help.ShowAll = true
 	return nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.Type == tea.KeyCtrlC {
-			return m, tea.Quit
-		}
 	case tea.WindowSizeMsg:
+		msg.Height -= 5 // 5 lines for key help view
 		cmds = append(cmds, menuSizeCmd(msg), docSizeCmd(msg))
-		m.height = msg.Height
+		m.mainHeight = msg.Height
 	}
-	_, cmd1 := m.menue.Update(msg)
+	_, cmd1 := m.menu.Update(msg)
 	_, cmd2 := m.doc.Update(msg)
 	cmds = append(cmds, cmd1, cmd2)
 	return m, tea.Batch(cmds...)
 }
 
 func (m *Model) View() string {
-	return lipgloss.JoinHorizontal(lipgloss.Top, m.menue.View(), m.sepView(), m.doc.View())
+	main := lipgloss.JoinHorizontal(lipgloss.Top, m.menu.View(), m.sepView(), m.doc.View())
+	return lipgloss.JoinVertical(lipgloss.Left, "\n", main, m.help.View(m))
+}
+
+func (m *Model) FullHelp() [][]key.Binding {
+	mk := m.menu.list.KeyMap
+	dk := m.doc.KeyMap
+	return [][]key.Binding{
+		{mk.CursorUp, mk.CursorDown},
+		{mk.PrevPage, mk.NextPage},
+		{dk.HalfPageUp, dk.HalfPageDown},
+		{mk.Quit},
+	}
+}
+
+func (m *Model) ShortHelp() []key.Binding {
+	return nil
 }
 
 func menuSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
@@ -84,5 +102,5 @@ func docSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
 }
 
 func (m *Model) sepView() string {
-	return strings.Repeat(Sep, m.height)
+	return strings.Repeat(Sep, m.mainHeight)
 }
