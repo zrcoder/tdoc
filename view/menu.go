@@ -15,21 +15,26 @@ import (
 type Menu struct {
 	list    list.Model
 	docs    []*model.DocInfo
+	width   int
+	height  int
 	current int
 }
 
-func NewMenu(docs []*model.DocInfo) *Menu {
+func NewMenu(title string, docs []*model.DocInfo) *Menu {
 	items := make([]list.Item, len(docs))
 	for i, d := range docs {
 		items[i] = item(d.Title)
 	}
 	l := list.New(items, itemDelegate{}, 0, 0)
-	l.Title = "My solutions"
+	if title != "" {
+		l.Title = title
+		l.Styles.Title = titleStyle
+	} else {
+		l.SetShowTitle(false)
+	}
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
 	l.SetShowHelp(false)
 
 	return &Menu{
@@ -52,10 +57,12 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case menuSizeMsg:
 		m.current = 0
-		m.list.SetSize(msg.Width, msg.Height)
+		m.width = msg.Width
+		m.height = msg.Height
 	}
 	var updateListCmd tea.Cmd
 	m.list, updateListCmd = m.list.Update(msg)
+	m.list.SetSize(m.width, m.height)
 	return m, tea.Batch(updateDocCmd, updateListCmd)
 }
 
@@ -74,7 +81,6 @@ var (
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 )
 
 type item string
@@ -91,11 +97,15 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	if !ok {
 		return
 	}
+	res := string(itm)
+	if len(res) > MenuWidth {
+		res = res[:MenuWidth]
+	}
 	fn := itemStyle.Render
 	if index == m.Index() {
 		fn = func(s ...string) string {
 			return selectedItemStyle.Render("> " + strings.Join(s, " "))
 		}
 	}
-	fmt.Fprint(w, fn(string(itm)))
+	fmt.Fprint(w, fn(res))
 }

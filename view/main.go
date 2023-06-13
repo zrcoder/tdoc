@@ -15,9 +15,10 @@ var (
 )
 
 const (
-	MenuWidth = 34
-	SepSpaces = 5
-	Sep       = "  |  \n"
+	MenuWidth  = 34
+	HelpHeight = 5
+	SepSpaces  = 5
+	Sep        = "  |  \n"
 )
 
 type (
@@ -28,22 +29,27 @@ type (
 
 type Getter func(string) ([]byte, error)
 
-func Run(docs []*model.DocInfo) error {
-	m := NewModel(docs)
+func Run(docs []*model.DocInfo, cfg ...model.Config) error {
+	m := NewModel(docs, cfg...)
 	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseAllMotion()).Run()
 	return err
 }
 
 type Model struct {
+	title      string
 	help       help.Model
 	menu       *Menu
 	doc        *Doc
 	mainHeight int
 }
 
-func NewModel(docs []*model.DocInfo) *Model {
+func NewModel(docs []*model.DocInfo, cfg ...model.Config) *Model {
 	model := &Model{}
-	model.menu = NewMenu(docs)
+	title := ""
+	if len(cfg) > 0 {
+		title = cfg[0].Title
+	}
+	model.menu = NewMenu(title, docs)
 	model.doc = NewDoc(docs[0])
 
 	model.help = help.New()
@@ -59,7 +65,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		msg.Height -= 5 // 5 lines for key help view
+		msg.Height -= HelpHeight
 		cmds = append(cmds, menuSizeCmd(msg), docSizeCmd(msg))
 		m.mainHeight = msg.Height
 	}

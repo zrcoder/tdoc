@@ -5,6 +5,6 @@ import (
 	"github.com/zrcoder/tdoc/view"
 )
 
-func Run(docs []*model.DocInfo) error {
-	return view.Run(docs)
+func Run(docs []*model.DocInfo, cfg ...model.Config) error {
+	return view.Run(docs, cfg...)
 }
