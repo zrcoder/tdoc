@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/zrcoder/tdoc/model"
 )
@@ -36,10 +35,8 @@ func NewMenu(title string, docs []*model.DocInfo) *Menu {
 	}
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	l.Title = title // can be ""
-	l.Styles.Title = titleStyle
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.PaginationStyle = paginationStyle
 
 	return &Menu{
 		docs: docs,
@@ -76,7 +73,6 @@ func (m *Menu) View() string {
 }
 
 var (
-	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
 	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 )
 
