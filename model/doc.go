@@ -5,11 +5,12 @@ import "time"
 type Getter func(string) ([]byte, error)
 
 type DocInfo struct {
-	Name    string
-	Title   string
-	ModTime time.Time
-	Getter  Getter
-	cached  []byte
+	Name        string
+	Title       string
+	Description string
+	ModTime     time.Time
+	Getter      Getter
+	cached      []byte
 }
 
 func (di *DocInfo) Get() ([]byte, error) {

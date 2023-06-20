@@ -1,9 +1,7 @@
 package view
 
 import (
-	"fmt"
-	"io"
-	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
@@ -23,9 +21,20 @@ type Menu struct {
 func NewMenu(title string, docs []*model.DocInfo) *Menu {
 	items := make([]list.Item, len(docs))
 	for i, d := range docs {
-		items[i] = item(d.Title)
+		desc := d.Description
+		if desc == "" {
+			t := d.ModTime
+			if t.IsZero() {
+				t = time.Now()
+			}
+			desc = t.Format("2006-01-02 15:04")
+		}
+		items[i] = item{
+			title: d.Title,
+			desc:  desc,
+		}
 	}
-	l := list.New(items, itemDelegate{}, 0, 0)
+	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
 	l.Title = title // can be ""
 	l.Styles.Title = titleStyle
 	l.SetShowStatusBar(false)
@@ -67,32 +76,14 @@ func (m *Menu) View() string {
 }
 
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	titleStyle      = lipgloss.NewStyle().MarginLeft(2)
+	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 )
 
-type item string
-
-func (item) FilterValue() string { return "" }
-
-type itemDelegate struct{}
-
-func (d itemDelegate) Height() int                             { return 1 }
-func (d itemDelegate) Spacing() int                            { return 0 }
-func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	itm, ok := listItem.(item)
-	if !ok {
-		return
-	}
-	res := string(itm)
-	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
-		}
-	}
-	fmt.Fprint(w, fn(res))
+type item struct {
+	title, desc string
 }
+
+func (i item) Title() string       { return i.title }
+func (i item) Description() string { return i.desc }
+func (i item) FilterValue() string { return i.title }
