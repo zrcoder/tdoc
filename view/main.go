@@ -1,10 +1,7 @@
 package view
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/zrcoder/tdoc/model"
@@ -15,19 +12,13 @@ var (
 )
 
 const (
-	MenuWidth  = 34
-	HelpHeight = 5
-	SepSpaces  = 5
-	Sep        = "  |  \n"
+	HelpHeight = 4
 )
 
 type (
-	docMsg      *model.DocInfo
-	menuSizeMsg tea.WindowSizeMsg
-	docSizeMsg  tea.WindowSizeMsg
+	docMsg  *model.DocInfo
+	menuMsg struct{}
 )
-
-type Getter func(string) ([]byte, error)
 
 func Run(docs []*model.DocInfo, cfg ...model.Config) error {
 	m := NewModel(docs, cfg...)
@@ -36,11 +27,10 @@ func Run(docs []*model.DocInfo, cfg ...model.Config) error {
 }
 
 type Model struct {
-	title      string
-	help       help.Model
-	menu       *Menu
-	doc        *Doc
-	mainHeight int
+	isMenu bool
+	help   help.Model
+	menu   *Menu
+	doc    *Doc
 }
 
 func NewModel(docs []*model.DocInfo, cfg ...model.Config) *Model {
@@ -49,64 +39,32 @@ func NewModel(docs []*model.DocInfo, cfg ...model.Config) *Model {
 	if len(cfg) > 0 {
 		title = cfg[0].Title
 	}
+	model.isMenu = len(docs) > 1
 	model.menu = NewMenu(title, docs)
-	model.doc = NewDoc(docs[0])
-
+	model.doc = NewDoc(docs[0], model.menu.list.KeyMap.Quit)
 	model.help = help.New()
 	return model
 }
 
 func (m *Model) Init() tea.Cmd {
-	m.help.ShowAll = true
 	return nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		msg.Height -= HelpHeight
-		cmds = append(cmds, menuSizeCmd(msg), docSizeCmd(msg))
-		m.mainHeight = msg.Height
+	switch msg.(type) {
+	case docMsg:
+		m.isMenu = false
+	case menuMsg:
+		m.isMenu = true
 	}
 	_, cmd1 := m.menu.Update(msg)
 	_, cmd2 := m.doc.Update(msg)
-	cmds = append(cmds, cmd1, cmd2)
-	return m, tea.Batch(cmds...)
+	return m, tea.Batch(cmd1, cmd2)
 }
 
 func (m *Model) View() string {
-	main := lipgloss.JoinHorizontal(lipgloss.Top, m.menu.View(), m.sepView(), m.doc.View())
-	return lipgloss.JoinVertical(lipgloss.Left, "\n", main, m.help.View(m))
-}
-
-func (m *Model) FullHelp() [][]key.Binding {
-	mk := m.menu.list.KeyMap
-	dk := m.doc.KeyMap
-	return [][]key.Binding{
-		{mk.CursorUp, mk.CursorDown},
-		{mk.PrevPage, mk.NextPage},
-		{dk.HalfPageUp, dk.HalfPageDown},
-		{mk.Quit},
+	if m.isMenu {
+		return m.menu.View()
 	}
-}
-
-func (m *Model) ShortHelp() []key.Binding {
-	return nil
-}
-
-func menuSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
-	return func() tea.Msg {
-		return menuSizeMsg{Width: MenuWidth, Height: msg.Height}
-	}
-}
-
-func docSizeCmd(msg tea.WindowSizeMsg) tea.Cmd {
-	return func() tea.Msg {
-		return docSizeMsg{Width: msg.Width - MenuWidth - SepSpaces, Height: msg.Height}
-	}
-}
-
-func (m *Model) sepView() string {
-	return strings.Repeat(Sep, m.mainHeight)
+	return m.doc.View()
 }

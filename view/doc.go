@@ -3,19 +3,24 @@ package view
 import (
 	"bytes"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	mr "github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/zrcoder/tdoc/model"
 )
 
 type Doc struct {
 	altViewport
-	Doc *model.DocInfo
+	quitKey key.Binding
+	help    help.Model
+	Doc     *model.DocInfo
 }
 
-func NewDoc(doc *model.DocInfo) *Doc {
-	return &Doc{Doc: doc}
+func NewDoc(doc *model.DocInfo, quitKey key.Binding) *Doc {
+	return &Doc{Doc: doc, help: help.New(), quitKey: quitKey}
 }
 
 func (d *Doc) Init() tea.Cmd {
@@ -27,13 +32,22 @@ func (d *Doc) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case docMsg:
 		d.Doc = msg
 		d.altViewport.GotoTop()
-	case docSizeMsg:
-		d.altViewport.Update(msg)
+	case tea.WindowSizeMsg:
+		d.altViewport.setSize(msg.Width, msg.Height-HelpHeight)
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, d.KeyMap.HalfPageUp):
+			d.altViewport.HalfViewUp()
+		case key.Matches(msg, d.KeyMap.HalfPageDown):
+			d.altViewport.HalfViewDown()
+		case key.Matches(msg, menuKey):
+			return d, func() tea.Msg { return menuMsg{} }
+		case msg.String() == "q" || msg.String() == "ctl+c":
+			return d, tea.Quit
+		}
 	}
-	var cmd tea.Cmd
-	d.Model, cmd = d.Model.Update(msg)
-	d.disableUnusedKeys()
-	return d, cmd
+	d.help, _ = d.help.Update(msg)
+	return d, nil
 }
 
 func (d *Doc) View() string {
@@ -42,14 +56,7 @@ func (d *Doc) View() string {
 		return ErrStyle.Copy().Render(err.Error())
 	}
 	d.altViewport.SetContent(string(content))
-	return d.altViewport.View()
-}
-
-func (d *Doc) disableUnusedKeys() {
-	d.altViewport.KeyMap.Down.SetEnabled(false)
-	d.altViewport.KeyMap.Up.SetEnabled(false)
-	d.altViewport.KeyMap.PageDown.SetEnabled(false)
-	d.altViewport.KeyMap.PageUp.SetEnabled(false)
+	return lipgloss.JoinVertical(lipgloss.Left, d.altViewport.View(), "\n", "  "+d.help.View(d))
 }
 
 func (d *Doc) renderedContent() ([]byte, error) {
@@ -59,10 +66,25 @@ func (d *Doc) renderedContent() ([]byte, error) {
 	}
 	// workaround for glamar's bug
 	content = bytes.ReplaceAll(content, []byte{'\t'}, []byte("    "))
-
 	render, err := mr.NewTermRenderer(mr.WithAutoStyle(), mr.WithWordWrap(d.altViewport.Width))
 	if err != nil {
 		return nil, err
 	}
 	return render.RenderBytes(content)
+}
+
+var menuKey = key.NewBinding(
+	key.WithKeys("m"),
+	key.WithHelp("m", "show menu"),
+)
+
+func (d *Doc) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{d.KeyMap.HalfPageUp, d.KeyMap.HalfPageDown},
+		{menuKey, d.quitKey},
+	}
+}
+
+func (d *Doc) ShortHelp() []key.Binding {
+	return []key.Binding{d.KeyMap.HalfPageUp, d.KeyMap.HalfPageDown, menuKey, d.quitKey}
 }

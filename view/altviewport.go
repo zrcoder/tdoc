@@ -2,20 +2,12 @@ package view
 
 import (
 	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type altViewport struct {
 	viewport.Model
 
 	ready bool
-}
-
-func (av *altViewport) Update(msg tea.Msg) {
-	switch msg := msg.(type) {
-	case docSizeMsg:
-		av.setSize(msg.Width, msg.Height)
-	}
 }
 
 func (av *altViewport) setSize(width, height int) {
