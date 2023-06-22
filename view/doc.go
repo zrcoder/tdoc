@@ -42,8 +42,6 @@ func (d *Doc) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			d.altViewport.HalfViewDown()
 		case key.Matches(msg, menuKey):
 			return d, func() tea.Msg { return menuMsg{} }
-		case msg.String() == "q" || msg.String() == "ctl+c":
-			return d, tea.Quit
 		}
 	}
 	d.help, _ = d.help.Update(msg)

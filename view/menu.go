@@ -72,10 +72,6 @@ func (m *Menu) View() string {
 	return m.list.View()
 }
 
-var (
-	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-)
-
 type item struct {
 	title, desc string
 }
