@@ -53,7 +53,8 @@ func (d *Doc) View() string {
 	if err != nil {
 		return ErrStyle.Copy().Render(err.Error())
 	}
-	d.altViewport.SetContent(string(content))
+	str := lipgloss.NewStyle().Width(d.altViewport.Width).Height(d.altViewport.Height).Render(string(content))
+	d.altViewport.SetContent(str)
 	return lipgloss.JoinVertical(lipgloss.Left, d.altViewport.View(), "\n", "  "+d.help.View(d))
 }
 
