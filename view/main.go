@@ -7,9 +7,7 @@ import (
 	"github.com/zrcoder/tdoc/model"
 )
 
-var (
-	ErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#f00"))
-)
+var ErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#f00"))
 
 const (
 	HelpHeight = 4
